@@ -1,9 +1,9 @@
-import TaskQueue from './TaskQueue.js';
+import TaskQueue from "./TaskQueue.js";
 
 const PLAYER_MAX_POWER = 10;
 
-const Player = function () {
-    function Player(game, name, image, deck, view) {
+export default class Player {
+    constructor(game, name, image, deck, view) {
         this.game = game;
         this.name = name;
         this.image = image;
@@ -19,18 +19,18 @@ const Player = function () {
         this.updateView();
     }
 
-    Player.prototype.buildDeck = function () {
+    buildDeck() {
         let position = 0;
         for (const card of this.deck) {
-            card.putInDeck(this.view.deck, this.view.inBottomRow, position)
+            card.putInDeck(this.view.deck, this.view.inBottomRow, position);
             position++;
         }
-    };
+    }
 
-    Player.prototype.takeDamage = function (value, continuation) {
+    takeDamage(value, continuation) {
         const taskQueue = new TaskQueue();
 
-        taskQueue.push(onDone => {
+        taskQueue.push((onDone) => {
             this.currentPower = this.currentPower - value;
             this.updateView();
 
@@ -38,14 +38,14 @@ const Player = function () {
         });
 
         taskQueue.continueWith(continuation);
-    };
+    }
 
-    Player.prototype.playNewCard = function (continuation) {
+    playNewCard(continuation) {
         const taskQueue = new TaskQueue();
 
-        taskQueue.push(onDone => this.view.signalTurnStart(onDone));
+        taskQueue.push((onDone) => this.view.signalTurnStart(onDone));
 
-        taskQueue.push(onDone => {
+        taskQueue.push((onDone) => {
             if (this.deck.length === 0 || this.table.length >= this.maxTableSize) {
                 onDone();
                 return;
@@ -62,13 +62,13 @@ const Player = function () {
         });
 
         taskQueue.continueWith(continuation);
-    };
+    }
 
-    Player.prototype.applyCards = function (continuation) {
+    applyCards(continuation) {
         const taskQueue = new TaskQueue();
 
-        for(let position = 0; position < this.table.length; position++) {
-            taskQueue.push(onDone => {
+        for (let position = 0; position < this.table.length; position++) {
+            taskQueue.push((onDone) => {
                 const card = this.table[position];
                 if (card) {
                     const gameContext = this.game.getContextForCard(position);
@@ -80,17 +80,17 @@ const Player = function () {
         }
 
         taskQueue.continueWith(continuation);
-    };
+    }
 
-    Player.prototype.removeDeadAndCompactTable = function (continuation) {
+    removeDeadAndCompactTable(continuation) {
         this.removeDead(() => this.compactTable(continuation));
-    };
+    }
 
-    Player.prototype.removeDead = function (continuation) {
+    removeDead(continuation) {
         const taskQueue = new TaskQueue();
 
-        for(let position = 0; position < this.table.length; position++) {
-            taskQueue.push(onDone => {
+        for (let position = 0; position < this.table.length; position++) {
+            taskQueue.push((onDone) => {
                 const card = this.table[position];
                 if (!card || card.currentPower > 0) {
                     onDone();
@@ -102,13 +102,13 @@ const Player = function () {
         }
 
         taskQueue.continueWith(continuation);
-    };
+    }
 
-    Player.prototype.compactTable = function (continuation) {
+    compactTable(continuation) {
         const taskQueue = new TaskQueue();
 
-        for(let position = 0; position < this.table.length; position++) {
-            taskQueue.push(onDone => {
+        for (let position = 0; position < this.table.length; position++) {
+            taskQueue.push((onDone) => {
                 if (this.table[position]) {
                     onDone();
                     return;
@@ -133,22 +133,18 @@ const Player = function () {
         }
 
         taskQueue.continueWith(continuation);
-    };
+    }
 
-    Player.prototype.updateView = function () {
+    updateView() {
         this.view.updateData({
             image: this.image,
             currentPower: this.currentPower,
-            maxPower: this.maxPower
+            maxPower: this.maxPower,
         });
         for (const card of this.table) {
             if (card) {
                 card.updateView();
             }
         }
-    };
-
-    return Player;
-}();
-
-export default Player;
+    }
+}
