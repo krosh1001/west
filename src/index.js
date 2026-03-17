@@ -96,7 +96,7 @@ class Lad extends Dog {
 		continuation();
 	}
 
-	doBeforeRemoving( continuation) {
+	doBeforeRemoving(continuation) {
 		Lad.setInGameCount(Lad.getInGameCount() - 1);
 		continuation();
 	}
@@ -225,27 +225,20 @@ class Brewer extends Duck {
 
 		this.view.signalAbility(() => {
 			const cards = currentPlayer.table.concat(oppositePlayer.table);
-			let index = 0;
+			const taskQueue = new TaskQueue();
 
-			const next = () => {
-				while (index < cards.length && !isDuck(cards[index])) index++;
-				if (index === cards.length) {
-					continuation();
-					return;
-				}
-
-				const card = cards[index];
-				index++;
-
-				card.view.signalHeal(() => {
-					card.maxPower += 1;
-					card.currentPower += 2;
-					card.updateView();
-					next();
+			for (const card of cards) {
+				taskQueue.push((onDone) => {
+					card.view.signalHeal(() => {
+						card.maxPower += 1;
+						card.currentPower += 2;
+						card.updateView();
+						onDone();
+					});
 				});
-			};
+			}
 
-			next();
+			taskQueue.continueWith(continuation);
 		});
 	}
 
