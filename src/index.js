@@ -243,17 +243,38 @@ class Brewer extends Duck {
 	}
 }
 
+class PseudoDuck extends Dog {
+	constructor(name = "Псевдоутка", maxPower = 3, image) {
+		super(name, maxPower, image);
+	}
 
-const sheriffStartDeck = [new Duck(), new Brewer()];
-const banditStartDeck = [new Dog(), new Dog(), new Dog(), new Dog()];
+	quacks() {
+		console.log("quackkk... woof woff!!");
+	}
 
-// Создание игры.
+	swims() {
+		console.log("even dogs can swim!!");
+	}
+
+	getDescriptions() {
+		return ["Это утка?...", ...super.getDescriptions()];
+	}
+}
+
+const sheriffStartDeck = [
+	new Duck(),
+	new Brewer(),
+];
+const banditStartDeck = [
+	new Dog(),
+	new PseudoDuck(),
+	new Dog(),
+];
+
 const game = new Game(sheriffStartDeck, banditStartDeck);
 
-// Глобальный объект, позволяющий управлять скоростью всех анимаций.
 SpeedRate.set(4);
 
-// Запуск игры.
 game.play(false, (winner) => {
 	alert("Победил " + winner.name);
 });
