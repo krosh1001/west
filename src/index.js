@@ -96,7 +96,7 @@ class Lad extends Dog {
 		continuation();
 	}
 
-	doBeforeRemoving(gameContext, continuation) {
+	doBeforeRemoving( continuation) {
 		Lad.setInGameCount(Lad.getInGameCount() - 1);
 		continuation();
 	}
@@ -139,11 +139,88 @@ class Trasher extends Dog {
 	}
 }
 
-const seriffStartDeck = [new Duck(), new Duck(), new Duck()];
+class Rogue extends Creature {
+	static stealableAbilities = [
+		"modifyDealedDamageToCreature",
+		"modifyDealedDamageToPlayer",
+		"modifyTakenDamage",
+	];
+
+	stolenAbilities = new Map();
+
+	applyStolenAbilities(name, value, continuation, ...args) {
+		let index = 0;
+		let abilities = this.stolenAbilities.get(name) || [];
+
+		const next = (currentValue) => {
+			if (index === abilities.length) {
+				continuation(currentValue);
+				return;
+			}
+
+			const ability = abilities[index];
+			index++;
+
+			ability.call(this, currentValue, ...args, next);
+		};
+
+		next(value);
+	}
+
+	constructor(name = "Изгой", maxPower = 2, image) {
+		super(name, maxPower, image);
+	}
+
+	doBeforeAttack(gameContext, continuation) {
+		const { currentPlayer, oppositePlayer, position, updateView } = gameContext;
+
+		this.view.signalAbility(() => {
+			const oppositeCard = oppositePlayer.table[position];
+
+			const prototype = Object.getPrototypeOf(oppositeCard);
+			for (const ability of Rogue.stealableAbilities) {
+				if (Object.hasOwn(prototype, ability)) {
+					const oneTypeAbilities = this.stolenAbilities.get(ability) || [];
+					oneTypeAbilities.push(prototype[ability]);
+					delete prototype[ability];
+					this.stolenAbilities.set(ability, oneTypeAbilities);
+				}
+			}
+
+			updateView();
+			continuation();
+		});
+	}
+
+	modifyDealedDamageToCreature(value, toCard, gameContext, continuation) {
+		this.applyStolenAbilities(
+			"modifyDealedDamageToCreature",
+			value,
+			continuation,
+			toCard,
+			gameContext,
+		);
+	}
+
+	modifyDealedDamageToPlayer(value, gameContext, continuation) {
+		this.applyStolenAbilities("modifyDealedDamageToPlayer", value, continuation, gameContext);
+	}
+
+	modifyTakenDamage(value, fromCard, gameContext, continuation) {
+		this.applyStolenAbilities("modifyTakenDamage", value, continuation, fromCard, gameContext);
+	}
+
+	getDescriptions() {
+		return ["Похищает чужие способности", ...super.getDescriptions()];
+	}
+}
+
+
+const sheriffStartDeck = [new Duck(), new Duck(), new Duck(), new Rogue()];
 const banditStartDeck = [new Lad(), new Lad()];
 
 // Создание игры.
-const game = new Game(seriffStartDeck, banditStartDeck);
+const game = new Game(sheriffStartDeck, banditStartDeck);
 
 // Глобальный объект, позволяющий управлять скоростью всех анимаций.
 SpeedRate.set(4);
