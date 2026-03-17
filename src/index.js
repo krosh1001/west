@@ -37,9 +37,30 @@ function getCreatureDescription(card) {
 	return "Существо";
 }
 
-class Duck extends  Creature {
-	constructor() {
-		super("Мирная утка", 2);
+class Gatling extends Creature {
+	constructor(name = "Гатлинг", maxPower = 6, image) {
+		super(name, maxPower, image);
+	}
+
+	attack(gameContext, continuation) {
+		const taskQueue = new TaskQueue();
+
+		const { currentPlayer, oppositePlayer, position, updateView } = gameContext;
+
+		taskQueue.push((onDone) => this.view.showAttack(onDone));
+		for (const oppositeCard of oppositePlayer.table) {
+			taskQueue.push((onDone) => {
+				this.dealDamageToCreature(this.currentPower, oppositeCard, gameContext, onDone);
+			});
+		}
+
+		taskQueue.continueWith(continuation);
+	}
+}
+
+class Duck extends Creature {
+	constructor(name = "Мирная утка", maxPower = 2, image) {
+		super(name, maxPower, image);
 	}
 
 	quacks() {
@@ -54,6 +75,51 @@ class Duck extends  Creature {
 class Dog extends Creature {
 	constructor(name = "Пес-бандит", maxPower = 3, image) {
 		super(name, maxPower, image);
+	}
+}
+
+class Lad extends Dog {
+	constructor(name = "Браток", maxPower = 2, image) {
+		super(name, maxPower, image);
+	}
+
+	static getInGameCount() {
+		return this.inGameCount || 0;
+	}
+
+	static setInGameCount(value) {
+		this.inGameCount = value;
+	}
+
+	doAfterComingIntoPlay(gameContext, continuation) {
+		Lad.setInGameCount(Lad.getInGameCount() + 1);
+		continuation();
+	}
+
+	doBeforeRemoving(gameContext, continuation) {
+		Lad.setInGameCount(Lad.getInGameCount() - 1);
+		continuation();
+	}
+
+	static getBonus() {
+		const count = this.getInGameCount();
+		return (count * (count + 1)) / 2;
+	}
+
+	modifyTakenDamage(value, fromCard, gameContext, continuation) {
+		this.view.signalAbility(() => {
+			continuation(Math.max(value - Lad.getBonus(), 0));
+		});
+	}
+
+	modifyDealedDamageToCreature(value, toCard, gameContext, continuation) {
+		this.view.signalAbility(() => {
+			continuation(value + Lad.getBonus());
+		});
+	}
+
+	getDescriptions() {
+		return ["Чем их больше, тем они сильнее", ...super.getDescriptions()];
 	}
 }
 
@@ -73,17 +139,14 @@ class Trasher extends Dog {
 	}
 }
 
-// Колода Бандита, верхнего игрока.
-const banditStartDeck = [new Trasher()];
-
-// Колода Шерифа, нижнего игрока.
-const seriffStartDeck = [new Duck(), new Duck(), new Duck(), new Duck()];
+const seriffStartDeck = [new Duck(), new Duck(), new Duck()];
+const banditStartDeck = [new Lad(), new Lad()];
 
 // Создание игры.
 const game = new Game(seriffStartDeck, banditStartDeck);
 
 // Глобальный объект, позволяющий управлять скоростью всех анимаций.
-SpeedRate.set(1);
+SpeedRate.set(4);
 
 // Запуск игры.
 game.play(false, (winner) => {
