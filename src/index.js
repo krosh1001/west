@@ -3,6 +3,16 @@ import Game from "./Game.js";
 import TaskQueue from "./TaskQueue.js";
 import SpeedRate from "./SpeedRate.js";
 
+class Creature extends Card {
+	constructor(name, maxPower, image) {
+		super(name, maxPower, image);
+	}
+
+	getDescriptions() {
+		return [getCreatureDescription(this), ...super.getDescriptions()];
+	}
+}
+
 // Отвечает является ли карта уткой.
 function isDuck(card) {
 	return card && card.quacks && card.swims ? true : false;
@@ -27,7 +37,7 @@ function getCreatureDescription(card) {
 	return "Существо";
 }
 
-class Duck extends Card {
+class Duck extends  Creature {
 	constructor() {
 		super("Мирная утка", 2);
 	}
@@ -41,17 +51,33 @@ class Duck extends Card {
 	}
 }
 
-class Dog extends Card {
-	constructor() {
-		super("Пес-бандит", 3);
+class Dog extends Creature {
+	constructor(name = "Пес-бандит", maxPower = 3, image) {
+		super(name, maxPower, image);
+	}
+}
+
+class Trasher extends Dog {
+	constructor(name = "Громила", maxPower = 5, image) {
+		super(name, maxPower, image);
+	}
+
+	modifyTakenDamage(value, fromCard, gameContext, continuation) {
+		this.view.signalAbility(() => {
+			continuation(Math.max(value - 1, 0));
+		});
+	}
+
+	getDescriptions() {
+		return ["Получает меньше урона", ...super.getDescriptions()];
 	}
 }
 
 // Колода Бандита, верхнего игрока.
-const banditStartDeck = [new Dog()];
+const banditStartDeck = [new Trasher()];
 
 // Колода Шерифа, нижнего игрока.
-const seriffStartDeck = [new Duck(), new Duck(), new Duck()];
+const seriffStartDeck = [new Duck(), new Duck(), new Duck(), new Duck()];
 
 // Создание игры.
 const game = new Game(seriffStartDeck, banditStartDeck);
