@@ -215,9 +215,37 @@ class Rogue extends Creature {
 	}
 }
 
+class Brewer extends Duck {
+	constructor(name = "Пивовар", maxPower = 2, image) {
+		super(name, maxPower, image);
+	}
 
-const sheriffStartDeck = [new Duck(), new Duck(), new Duck(), new Rogue()];
-const banditStartDeck = [new Lad(), new Lad()];
+	doBeforeAttack(gameContext, continuation) {
+		const { currentPlayer, oppositePlayer, position, updateView } = gameContext;
+
+		this.view.signalAbility(() => {
+			for (const card of currentPlayer.table.concat(oppositePlayer.table)) {
+				if (isDuck(card)) {
+					card.view.signalHeal(() => {
+						card.maxPower += 1;
+						card.currentPower += 2;
+						card.updateView();
+					});
+				}
+			}
+
+			continuation();
+		});
+	}
+
+    getDescriptions() {
+		return ["Варит пивко всем уткам", ...super.getDescriptions()];
+	}
+}
+
+
+const sheriffStartDeck = [new Duck(), new Brewer()];
+const banditStartDeck = [new Dog(), new Dog(), new Dog(), new Dog()];
 
 // Создание игры.
 const game = new Game(sheriffStartDeck, banditStartDeck);

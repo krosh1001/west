@@ -2,16 +2,26 @@ import { default as View } from "./CardView.js";
 import TaskQueue from "./TaskQueue.js";
 
 export default class Card {
+    #currentPower;
+
     constructor(name, maxPower, image) {
         this.name = name;
         this.image = image;
 
         this.maxPower = maxPower;
-        this.currentPower = maxPower;
+        this.#currentPower = maxPower;
 
         this.view = new View();
         this.updateView();
     }
+
+    get currentPower() {
+		return this.#currentPower;
+	}
+
+	set currentPower(value) {
+		this.#currentPower = Math.min(value, this.maxPower);
+	}
 
     // Размещает карту в колоде в начале игры.
     // Нельзя переопределять в наследниках.
