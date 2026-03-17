@@ -224,21 +224,32 @@ class Brewer extends Duck {
 		const { currentPlayer, oppositePlayer, position, updateView } = gameContext;
 
 		this.view.signalAbility(() => {
-			for (const card of currentPlayer.table.concat(oppositePlayer.table)) {
-				if (isDuck(card)) {
-					card.view.signalHeal(() => {
-						card.maxPower += 1;
-						card.currentPower += 2;
-						card.updateView();
-					});
-				}
-			}
+			const cards = currentPlayer.table.concat(oppositePlayer.table);
+			let index = 0;
 
-			continuation();
+			const next = () => {
+				while (index < cards.length && !isDuck(cards[index])) index++;
+				if (index === cards.length) {
+					continuation();
+					return;
+				}
+
+				const card = cards[index];
+				index++;
+
+				card.view.signalHeal(() => {
+					card.maxPower += 1;
+					card.currentPower += 2;
+					card.updateView();
+					next();
+				});
+			};
+
+			next();
 		});
 	}
 
-    getDescriptions() {
+	getDescriptions() {
 		return ["Варит пивко всем уткам", ...super.getDescriptions()];
 	}
 }
@@ -261,19 +272,32 @@ class PseudoDuck extends Dog {
 	}
 }
 
-const sheriffStartDeck = [
-	new Duck(),
-	new Brewer(),
-];
-const banditStartDeck = [
-	new Dog(),
-	new PseudoDuck(),
-	new Dog(),
-];
+class Nemo extends Creature {
+	constructor(name = "Немо", maxPower = 4, image) {
+		super(name, maxPower, image);
+	}
+
+	doBeforeAttack(gameContext, continuation) {
+		const { currentPlayer, oppositePlayer, position, updateView } = gameContext;
+
+		this.view.signalAbility(() => {
+			const oppositeCard = oppositePlayer.table[position];
+
+			const prototype = Object.getPrototypeOf(oppositeCard);
+			Object.setPrototypeOf(this, prototype);
+
+			this.updateView();
+			this.doBeforeAttack(gameContext, continuation);
+		});
+	}
+}
+
+const sheriffStartDeck = [new Nemo()];
+const banditStartDeck = [new Brewer(), new Brewer()];
 
 const game = new Game(sheriffStartDeck, banditStartDeck);
 
-SpeedRate.set(4);
+SpeedRate.set(1.6);
 
 game.play(false, (winner) => {
 	alert("Победил " + winner.name);
